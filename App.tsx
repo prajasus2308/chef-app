@@ -23,7 +23,10 @@ import {
   ChevronLeft,
   CheckCircle2,
   Mic,
-  MicOff
+  MicOff,
+  Activity,
+  Droplets,
+  ZapOff
 } from 'lucide-react';
 
 // --- Types ---
@@ -32,6 +35,10 @@ interface Nutrition {
   protein: string;
   carbs: string;
   fat: string;
+  fiber: string;
+  sugar: string;
+  sodium: string;
+  cholesterol: string;
 }
 
 interface Recipe {
@@ -175,8 +182,8 @@ export default function App() {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const parts: any[] = imageB64 
-        ? [{ inlineData: { mimeType: 'image/jpeg', data: imageB64.split(',')[1] } }, { text: `Gourmet recipe for items in image. ${prompt}. IMPORTANT: Always end the recipe description with the phrase 'Crafted by praj'.` }]
-        : [{ text: `Gourmet recipe for: ${prompt}. IMPORTANT: Always end the recipe description with the phrase 'Crafted by praj'.` }];
+        ? [{ inlineData: { mimeType: 'image/jpeg', data: imageB64.split(',')[1] } }, { text: `Gourmet recipe for items in image. ${prompt}. IMPORTANT: Always end the recipe description with the phrase 'Crafted by praj'. Provide detailed nutritional info.` }]
+        : [{ text: `Gourmet recipe for: ${prompt}. IMPORTANT: Always end the recipe description with the phrase 'Crafted by praj'. Provide detailed nutritional info.` }];
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -190,7 +197,20 @@ export default function App() {
               description: { type: Type.STRING },
               prepTime: { type: Type.STRING },
               servings: { type: Type.STRING },
-              nutrition: { type: Type.OBJECT, properties: { calories: { type: Type.STRING }, protein: { type: Type.STRING }, carbs: { type: Type.STRING }, fat: { type: Type.STRING } } },
+              nutrition: { 
+                type: Type.OBJECT, 
+                properties: { 
+                  calories: { type: Type.STRING }, 
+                  protein: { type: Type.STRING }, 
+                  carbs: { type: Type.STRING }, 
+                  fat: { type: Type.STRING },
+                  fiber: { type: Type.STRING },
+                  sugar: { type: Type.STRING },
+                  sodium: { type: Type.STRING },
+                  cholesterol: { type: Type.STRING },
+                },
+                required: ['calories', 'protein', 'carbs', 'fat', 'fiber', 'sugar', 'sodium', 'cholesterol']
+              },
               ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
               instructions: { type: Type.ARRAY, items: { type: Type.STRING } },
             },
@@ -219,7 +239,10 @@ export default function App() {
       instructions: ["Step-by-step instructions not provided for manual entry."],
       prepTime: "Manual",
       servings: "N/A",
-      nutrition: { calories: "-", protein: "-", carbs: "-", fat: "-" },
+      nutrition: { 
+        calories: "-", protein: "-", carbs: "-", fat: "-", 
+        fiber: "-", sugar: "-", sodium: "-", cholesterol: "-" 
+      },
       createdAt: Date.now()
     };
     setSavedRecipes([newRecipe, ...savedRecipes]);
@@ -346,9 +369,57 @@ export default function App() {
                           <button onClick={() => { if (!savedRecipes.find(r => r.title === currentRecipe.title)) setSavedRecipes([currentRecipe, ...savedRecipes]); }} className="bg-orange-50 text-orange-600 p-3 rounded-full hover:bg-orange-100"><Heart size={20} /></button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                         {Object.entries(currentRecipe.nutrition).map(([k, v]) => <div key={k} className="bg-slate-50 p-3 rounded-xl border border-slate-100"><span className="block text-[8px] uppercase font-bold text-slate-400">{k}</span><span className="block text-sm font-bold text-slate-700">{v}</span></div>)}
+
+                      {/* Nutritional Breakdown Section */}
+                      <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider flex items-center gap-2">
+                            <Activity size={14} className="text-orange-600" /> Nutritional Facts
+                          </h3>
+                          <span className="text-xs font-bold text-slate-500">Per Serving</span>
+                        </div>
+                        
+                        {/* Macro Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 text-center">
+                            <span className="block text-[8px] uppercase font-bold text-slate-400 mb-1">Calories</span>
+                            <span className="text-xl font-black text-slate-900 leading-none">{currentRecipe.nutrition.calories}</span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 text-center">
+                            <span className="block text-[8px] uppercase font-bold text-slate-400 mb-1">Protein</span>
+                            <span className="text-xl font-black text-emerald-600 leading-none">{currentRecipe.nutrition.protein}</span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 text-center">
+                            <span className="block text-[8px] uppercase font-bold text-slate-400 mb-1">Carbs</span>
+                            <span className="text-xl font-black text-orange-600 leading-none">{currentRecipe.nutrition.carbs}</span>
+                          </div>
+                          <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 text-center">
+                            <span className="block text-[8px] uppercase font-bold text-slate-400 mb-1">Fat</span>
+                            <span className="text-xl font-black text-amber-600 leading-none">{currentRecipe.nutrition.fat}</span>
+                          </div>
+                        </div>
+
+                        {/* Detailed Macros List */}
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200/50">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 font-semibold">Fiber</span>
+                            <span className="text-slate-900 font-bold">{currentRecipe.nutrition.fiber}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 font-semibold">Sugar</span>
+                            <span className="text-slate-900 font-bold">{currentRecipe.nutrition.sugar}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 font-semibold">Sodium</span>
+                            <span className="text-slate-900 font-bold">{currentRecipe.nutrition.sodium}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 font-semibold">Cholesterol</span>
+                            <span className="text-slate-900 font-bold">{currentRecipe.nutrition.cholesterol}</span>
+                          </div>
+                        </div>
                       </div>
+
                       <p className="text-slate-600 italic border-l-4 border-orange-100 pl-4 mb-8 leading-relaxed">
                         {currentRecipe.description}
                       </p>
@@ -518,4 +589,15 @@ export default function App() {
             <h3 className="text-2xl md:text-3xl font-bold text-slate-900">{cookingMode.instructions[currentStep]}</h3>
             <div className="flex items-center gap-8">
               <button disabled={currentStep === 0} onClick={() => { setCurrentStep(s => s - 1); setIsSpeaking(false); }} className="p-4 rounded-2xl bg-slate-100 disabled:opacity-30"><ChevronLeft size={32} /></button>
-              <button onClick={() => speakStep(cookingMode.instructions[currentStep])} disabled={is
+              <button onClick={() => speakStep(cookingMode.instructions[currentStep])} disabled={isSpeaking} className={`w-24 h-24 rounded-full flex items-center justify-center ${isSpeaking ? 'bg-orange-100 text-orange-600 animate-pulse' : 'bg-orange-600 text-white shadow-xl'}`}><Volume2 size={40} /></button>
+              <button disabled={currentStep === cookingMode.instructions.length - 1} onClick={() => { setCurrentStep(s => s + 1); setIsSpeaking(false); }} className="p-4 rounded-2xl bg-slate-100 disabled:opacity-30"><ChevronRight size={32} /></button>
+            </div>
+          </div>
+          <div className="mt-auto py-8 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">
+            Created by Pratyush Raj | by praj
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
