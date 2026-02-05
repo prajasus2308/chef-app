@@ -2,6 +2,7 @@
   "name": "ChefGenius AI",
   "description": "A high-end AI-powered culinary assistant that generates creative recipes, provides real-time cooking advice, and visualizes gourmet dishes using Gemini's latest models.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

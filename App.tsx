@@ -21,7 +21,9 @@ import {
   Zap,
   ChevronRight,
   ChevronLeft,
-  CheckCircle2
+  CheckCircle2,
+  Mic,
+  MicOff
 } from 'lucide-react';
 
 // --- Types ---
@@ -77,6 +79,10 @@ export default function App() {
   const [newItemText, setNewItemText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Voice Input State
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
   // Modals
   const [showAddDishModal, setShowAddDishModal] = useState(false);
   const [customDish, setCustomDish] = useState({ title: '', desc: '', ingredients: '' });
@@ -98,6 +104,24 @@ export default function App() {
     const storedItems = localStorage.getItem('chefgenius_shopping_v3');
     if (storedRecipes) try { setSavedRecipes(JSON.parse(storedRecipes)); } catch (e) {}
     if (storedItems) try { setManualShoppingItems(JSON.parse(storedItems)); } catch (e) {}
+
+    // Initialize Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setPrompt(prev => prev ? `${prev} ${transcript}` : transcript);
+      };
+      recognitionRef.current = recognition;
+    }
   }, []);
 
   useEffect(() => {
@@ -109,6 +133,18 @@ export default function App() {
   }, [manualShoppingItems]);
 
   // --- Functions ---
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      if (!recognitionRef.current) {
+        alert("Speech recognition is not supported in this browser.");
+        return;
+      }
+      recognitionRef.current.start();
+    }
+  };
+
   const startCamera = async () => {
     setIsCameraOpen(true);
     setCapturedImage(null);
@@ -272,12 +308,19 @@ export default function App() {
                 <p className="text-slate-500">Prompt your craving or scan your ingredients. <span className="text-orange-600 font-medium italic">by praj</span></p>
               </header>
               <div className="flex flex-col md:flex-row gap-4 items-stretch">
-                <div className="bg-white flex-1 p-1 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 px-4 py-2 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all">
+                <div className="bg-white flex-1 p-1 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 px-4 py-2 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all relative">
                   <Search className="text-slate-400" size={24} />
                   <input 
                     type="text" value={prompt} onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Ask for anything..." className="flex-1 bg-transparent border-none focus:ring-0 text-lg py-4"
                   />
+                  <button 
+                    onClick={toggleListening}
+                    className={`p-2 rounded-full transition-all ${isListening ? 'bg-orange-100 text-orange-600 animate-pulse scale-110 shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                    title={isListening ? "Listening..." : "Dictate your request"}
+                  >
+                    {isListening ? <Mic size={24} /> : <MicOff size={24} />}
+                  </button>
                 </div>
                 <button onClick={startCamera} className="bg-white border-2 border-slate-200 text-slate-600 p-4 rounded-2xl hover:border-orange-500 hover:text-orange-600 transition-all flex items-center justify-center gap-2 font-semibold">
                   <Camera size={24} /> <span className="hidden lg:inline">Scan Ingredients</span>
@@ -475,15 +518,4 @@ export default function App() {
             <h3 className="text-2xl md:text-3xl font-bold text-slate-900">{cookingMode.instructions[currentStep]}</h3>
             <div className="flex items-center gap-8">
               <button disabled={currentStep === 0} onClick={() => { setCurrentStep(s => s - 1); setIsSpeaking(false); }} className="p-4 rounded-2xl bg-slate-100 disabled:opacity-30"><ChevronLeft size={32} /></button>
-              <button onClick={() => speakStep(cookingMode.instructions[currentStep])} disabled={isSpeaking} className={`w-24 h-24 rounded-full flex items-center justify-center ${isSpeaking ? 'bg-orange-100 text-orange-600 animate-pulse' : 'bg-orange-600 text-white shadow-xl'}`}><Volume2 size={40} /></button>
-              <button disabled={currentStep === cookingMode.instructions.length - 1} onClick={() => { setCurrentStep(s => s + 1); setIsSpeaking(false); }} className="p-4 rounded-2xl bg-slate-100 disabled:opacity-30"><ChevronRight size={32} /></button>
-            </div>
-          </div>
-          <div className="mt-auto py-8 text-center text-slate-300 text-[10px] font-bold uppercase tracking-widest">
-            Created by Pratyush Raj | by praj
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+              <button onClick={() => speakStep(cookingMode.instructions[currentStep])} disabled={is
